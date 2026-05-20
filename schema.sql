@@ -1,8 +1,7 @@
-CREATE DATABASE control_financiero;
+-- Copia y pega esto en Supabase SQL Editor (https://supabase.com/dashboard/project/_/sql/new)
+-- O ejecutalo con psql si usas PostgreSQL local
 
-\c control_financiero;
-
-CREATE TABLE transacciones (
+CREATE TABLE IF NOT EXISTS transacciones (
   id SERIAL PRIMARY KEY,
   tipo VARCHAR(20) NOT NULL CHECK (tipo IN ('ingreso', 'gasto')),
   categoria VARCHAR(50) NOT NULL,
@@ -12,4 +11,4 @@ CREATE TABLE transacciones (
   creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_transacciones_fecha ON transacciones(fecha DESC);
+CREATE INDEX IF NOT EXISTS idx_transacciones_fecha ON transacciones(fecha DESC);
