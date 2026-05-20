@@ -1,21 +1,32 @@
-import pool from '../../lib/db';
+import supabase from '../../lib/db';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
   try {
-    const result = await pool.query(`
-      SELECT
-        COALESCE(SUM(CASE WHEN tipo = 'ingreso' THEN monto ELSE 0 END), 0) AS ingresos,
-        COALESCE(SUM(CASE WHEN tipo = 'gasto' THEN monto ELSE 0 END), 0) AS gastos,
-        COUNT(*) AS total
-      FROM transacciones
-    `);
-    const row = result.rows[0];
+    const { data: ingresos, error: err1 } = await supabase
+      .from('transacciones')
+      .select('monto')
+      .eq('tipo', 'ingreso');
+
+    const { data: gastos, error: err2 } = await supabase
+      .from('transacciones')
+      .select('monto')
+      .eq('tipo', 'gasto');
+
+    const { count, error: err3 } = await supabase
+      .from('transacciones')
+      .select('*', { count: 'exact', head: true });
+
+    if (err1 || err2 || err3) throw err1 || err2 || err3;
+
+    const totalIngresos = ingresos.reduce((s, r) => s + parseFloat(r.monto), 0);
+    const totalGastos = gastos.reduce((s, r) => s + parseFloat(r.monto), 0);
+
     res.json({
-      ingresos: parseFloat(row.ingresos),
-      gastos: parseFloat(row.gastos),
-      balance: parseFloat(row.ingresos) - parseFloat(row.gastos),
-      total: parseInt(row.total),
+      ingresos: totalIngresos,
+      gastos: totalGastos,
+      balance: totalIngresos - totalGastos,
+      total: count || 0,
     });
   } catch (err) {
     console.error(err);

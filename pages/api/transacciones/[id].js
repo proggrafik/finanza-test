@@ -1,13 +1,19 @@
-import pool from '../../../lib/db';
+import supabase from '../../../lib/db';
 
 export default async function handler(req, res) {
   if (req.method !== 'DELETE') return res.status(405).json({ error: 'Method not allowed' });
   try {
-    const result = await pool.query(
-      'DELETE FROM transacciones WHERE id = $1 RETURNING *',
-      [req.query.id]
-    );
-    if (!result.rows.length) return res.status(404).json({ error: 'No encontrada' });
+    const { data, error } = await supabase
+      .from('transacciones')
+      .delete()
+      .eq('id', req.query.id)
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') return res.status(404).json({ error: 'No encontrada' });
+      throw error;
+    }
     res.json({ message: 'Eliminada', id: req.query.id });
   } catch (err) {
     console.error(err);

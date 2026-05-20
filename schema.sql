@@ -1,5 +1,4 @@
--- Copia y pega esto en Supabase SQL Editor (https://supabase.com/dashboard/project/_/sql/new)
--- O ejecutalo con psql si usas PostgreSQL local
+-- Pega esto en Supabase SQL Editor: https://supabase.com/dashboard/project/_/sql/new
 
 CREATE TABLE IF NOT EXISTS transacciones (
   id SERIAL PRIMARY KEY,

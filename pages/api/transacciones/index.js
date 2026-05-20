@@ -1,4 +1,4 @@
-import pool from '../../../lib/db';
+import supabase from '../../../lib/db';
 
 export default async function handler(req, res) {
   switch (req.method) {
@@ -16,26 +16,17 @@ export default async function handler(req, res) {
 async function obtener(req, res) {
   try {
     const { tipo, categoria, busqueda } = req.query;
-    let sql = 'SELECT * FROM transacciones WHERE 1=1';
-    const params = [];
-    let idx = 1;
+    let query = supabase.from('transacciones').select('*');
 
-    if (tipo && tipo !== 'todas') {
-      sql += ` AND tipo = $${idx++}`;
-      params.push(tipo);
-    }
-    if (categoria && categoria !== 'todas') {
-      sql += ` AND categoria = $${idx++}`;
-      params.push(categoria);
-    }
-    if (busqueda) {
-      sql += ` AND LOWER(descripcion) LIKE $${idx++}`;
-      params.push(`%${busqueda.toLowerCase()}%`);
-    }
+    if (tipo && tipo !== 'todas') query = query.eq('tipo', tipo);
+    if (categoria && categoria !== 'todas') query = query.eq('categoria', categoria);
+    if (busqueda) query = query.ilike('descripcion', `%${busqueda}%`);
 
-    sql += ' ORDER BY fecha DESC, id DESC';
-    const result = await pool.query(sql, params);
-    res.json(result.rows);
+    query = query.order('fecha', { ascending: false }).order('id', { ascending: false });
+
+    const { data, error } = await query;
+    if (error) throw error;
+    res.json(data);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al obtener transacciones' });
@@ -45,12 +36,14 @@ async function obtener(req, res) {
 async function crear(req, res) {
   try {
     const { tipo, categoria, monto, descripcion, fecha } = req.body;
-    const result = await pool.query(
-      `INSERT INTO transacciones (tipo, categoria, monto, descripcion, fecha)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [tipo, categoria, monto, descripcion, fecha]
-    );
-    res.status(201).json(result.rows[0]);
+    const { data, error } = await supabase
+      .from('transacciones')
+      .insert({ tipo, categoria, monto, descripcion, fecha })
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.status(201).json(data);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al crear transaccion' });
@@ -59,7 +52,12 @@ async function crear(req, res) {
 
 async function eliminarTodo(req, res) {
   try {
-    await pool.query('DELETE FROM transacciones');
+    const { error } = await supabase
+      .from('transacciones')
+      .delete()
+      .neq('id', 0);
+
+    if (error) throw error;
     res.json({ message: 'Todas las transacciones fueron eliminadas' });
   } catch (err) {
     console.error(err);
